@@ -82,8 +82,18 @@ C<postcss>.
   app->asset->pipe("PostCSS")->exe("/some/custom/path/to/postcss");
 
   # Set custom application arguments if necessary
-  # Most customisation should be done by modifying the postcss.config.js
+  # Usually, customisation should be done by modifying the postcss.config.js
   app->asset->pipe("PostCSS")->exe_args([ '-u autoprefixer', '--no-map' ]);
+
+  # Have assets/postcss.config.js available with a config like this:
+  # module.exports = (ctx) => ({
+  #   'map': false,
+  #   'use': ['autoprefixer', 'cssnano'],
+  #   'plugins': {
+  #     'autoprefixer': {},
+  #     'cssnano': ctx.env === 'production' ? {} : false
+  #   }
+  # })
 
 =head1 DESCRIPTION
 
