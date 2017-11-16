@@ -2,7 +2,7 @@
 package Mojolicious::Plugin::AssetPack::Pipe::PostCSS;
 
 use Mojo::Base 'Mojolicious::Plugin::AssetPack::Pipe';
-use Mojolicious::Plugin::AssetPack::Util qw( diag DEBUG );
+use Mojolicious::Plugin::AssetPack::Util qw( checksum diag DEBUG );
 
 has exe => 'postcss';
 
@@ -41,17 +41,23 @@ sub process {
 			$attrs->{'key'} = 'postcss';
 
 			# We cannot reliably use the cached css file, since we do not know
-			# if the *config file* was modified since we last processed the css
+			# if the *config file* was modified since we last processed the css.
+			# Remove cached files after modifying the config...
+
 			#if ( $file = $store->load($attrs) ) {
 			#	return $asset->content($file)->FROM_JSON($attrs);
 			#}
 
 			diag 'Process "%s", with checksum %s.', $asset->url, $attrs->{'checksum'} if DEBUG;
 
-			my $stdout;
-			$pipe->run( [ $pipe->exe => @{ $pipe->exe_args } ], \$asset->content, \$stdout );
+			my $stdout = '';
+			my $input = $asset->content;
+			$pipe->run( [ $pipe->exe => @{ $pipe->exe_args } ], \$input, \$stdout );
 
-			$asset->content( $store->save( \$stdout, $attrs ) )->FROM_JSON($attrs);
+			if ( $stdout ne $input ) {
+				$attrs->{'checksum'} = checksum($stdout);
+			}
+			return $asset->content( $store->save( \$stdout, $attrs ) )->FROM_JSON($attrs);
 		}
 	);
 } ## end sub process
