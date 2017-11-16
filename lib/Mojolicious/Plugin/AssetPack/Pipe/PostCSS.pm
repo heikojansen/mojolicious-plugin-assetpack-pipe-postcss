@@ -40,10 +40,6 @@ sub process {
 			my $attrs = $asset->TO_JSON;
 			$attrs->{'key'} = 'postcss';
 
-			# We cannot reliably use the cached css file, since we do not know
-			# if the *config file* was modified since we last processed the css.
-			# Remove cached files after modifying the config...
-
 			#if ( $file = $store->load($attrs) ) {
 			#	return $asset->content($file)->FROM_JSON($attrs);
 			#}
@@ -106,6 +102,11 @@ C<postcss>.
 L<Mojolicious::Plugin::AssetPack::Pipe::PostCSS> will process your CSS files
 with the modular L<PostCSS|http://postcss.org/> transformation toolkit using
 the L<postcss|https://github.com/postcss/postcss-cli> executeable.
+
+B<NOTE:> Currently it is not possible to track modifications to the PostCSS
+config file or take these into account as triggers for reprocessing the CSS
+files. If you modify your config please delete all CSS files from the cache
+(usually located at C<MOJO_HOME/assets/cache>).
 
 =head1 ATTRIBUTES
 
