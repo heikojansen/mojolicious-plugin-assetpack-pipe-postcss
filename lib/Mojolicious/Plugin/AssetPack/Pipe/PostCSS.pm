@@ -3,6 +3,7 @@ package Mojolicious::Plugin::AssetPack::Pipe::PostCSS;
 
 use Mojo::Base 'Mojolicious::Plugin::AssetPack::Pipe';
 use Mojolicious::Plugin::AssetPack::Util qw( checksum diag DEBUG );
+use Mojo::File qw(path);
 
 has exe => 'postcss';
 
@@ -37,7 +38,10 @@ sub process {
 			my ( $asset, $index ) = @_;
 			return if $asset->format ne 'css';
 
+			my $cfg_checksum = checksum( path( $pipe->config_file )->slurp );
+
 			my $attrs = $asset->TO_JSON;
+			$attrs->{'checksum'} = checksum( $attrs->{'checksum'} . $cfg_checksum );
 			$attrs->{'key'} = 'postcss';
 
 			if ( $file = $store->load($attrs) ) {
