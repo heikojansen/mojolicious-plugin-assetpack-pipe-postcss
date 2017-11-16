@@ -3,37 +3,30 @@ package Mojolicious::Plugin::AssetPack::Pipe::PostCSS;
 
 use Mojo::Base 'Mojolicious::Plugin::AssetPack::Pipe';
 use Mojolicious::Plugin::AssetPack::Util qw( diag DEBUG );
-use Mojo::Home;
-use Data::Dumper;
 
-has app => 'postcss';
+has exe => 'postcss';
 
-has app_args => sub {
-	my $self = shift;
+has exe_args => sub {
+	my $pipe = shift;
 	my $args = [];
 
-	if ( my $cf = $self->config_file ) {
+	if ( my $cf = $pipe->config_file ) {
 		push @{$args}, sprintf( '--config %s', $cf )
 	}
 
-	if ( defined( $ENV{'MOJO_MODE'} ) ) {
-		push @{$args}, sprintf( '--env %s', $ENV{'MOJO_MODE'} );
-	}
-	else {
-		push @{$args}, '--env development'; 
-	}
+	push @{$args}, sprintf( '--env %s', $pipe->app->mode );
 
 	return $args;
 };
 
 has config_file => sub {
-	my $self = shift;
-	return Mojo::Home->new->rel_file('postcss.config.js');
+	my $pipe = shift;
+	return $pipe->assetpack->store->asset('postcss.config.js')->path;
 };
 
 sub process {
-	my ( $self, $assets ) = @_;
-	my $store = $self->assetpack->store;
+	my ( $pipe, $assets ) = @_;
+	my $store = $pipe->assetpack->store;
 	my $file;
 
 	return $assets->each(
@@ -44,25 +37,16 @@ sub process {
 			my $attrs = $asset->TO_JSON;
 			$attrs->{'key'} = 'postcss';
 
-			if ( my $cf = $self->config_file ) {
-				my $cf_mtime = ( stat($cf) )[9];
-
-				if ( my $file = $store->load($attrs) ) {
-					if ( $cf_mtime < $file->mtime ) {
-						return $asset->content($file);
-					}
-				}
-			}
-			else {
-				if ( my $file = $store->load($attrs) ) {
-					return $asset->content($file);
-				}
-			}
+			# We cannot reliably use the cached css file, since we do not know
+			# if the *config file* was modified since we last processed the css
+			#if ( $file = $store->load($attrs) ) {
+			#	return $asset->content($file)->FROM_JSON($attrs);
+			#}
 
 			diag 'Process "%s", with checksum %s.', $asset->url, $attrs->{'checksum'} if DEBUG;
 
 			my $stdout;
-			$self->run( [ $self->app => @{ $self->app_args } ], \$asset->content, \$stdout );
+			$pipe->run( [ $pipe->exe => @{ $pipe->exe_args } ], \$asset->content, \$stdout );
 
 			$asset->content( $store->save( \$stdout, $attrs ) )->FROM_JSON($attrs);
 		}
@@ -73,7 +57,7 @@ sub process {
 sub _install_postcss {
 	my $self  = shift;
 	my $class = ref $self;
-	die "$class requires https://github.com/postcss/postcss-cli";
+	die "$class requires https://github.com/postcss/postcss-cli (maybe run 'npm i postcss-cli'?)";
 }
 
 1;
@@ -88,13 +72,15 @@ C<postcss>.
 =head1 SYNOPSIS
 
   use Mojolicious::Lite;
-  
+
   plugin AssetPack => {pipes => [qw(... PostCSS ...)]};
 
-  app->asset->pipe("PostCSS")->app("/some/custom/path/to/postcss");
- 
-  # Set custom application arguments:
-  app->asset->pipe("PostCSS")->app_args([ '-u autoprefixer', '--no-map' ]);
+  # Override default if necessary
+  app->asset->pipe("PostCSS")->exe("/some/custom/path/to/postcss");
+
+  # Set custom application arguments if necessary
+  # Most customisation should be done by modifying the postcss.config.js
+  app->asset->pipe("PostCSS")->exe_args([ '-u autoprefixer', '--no-map' ]);
 
 =head1 DESCRIPTION
 
@@ -104,20 +90,20 @@ the L<postcss|https://github.com/postcss/postcss-cli> executeable.
 
 =head1 ATTRIBUTES
 
-=head2 app
+=head2 exe
 
-  $str = $self->app;
-  $self = $self->app("/some/custom/path/to/postcss");
- 
-Can be used to set a custom application (if, e.g., C<postcss> is not
+  $str = $pipe->exe;
+  $pipe = $pipe->exe("/some/custom/path/to/postcss");
+
+Can be used to set a custom executable (if, e.g., C<postcss> is not
 found in your C<PATH>.
 
-=head2 app_args
+=head2 exe_args
 
-  $array = $self->app_args;
-  $self = $self->app_args([ '$input', '-u autoprefixer', '--no-map' ]);
- 
-Can be used to set custom L</app> arguments.
+  $array = $pipe->exe_args;
+  $pipe = $pipe->exe_args([ '$input', '-u autoprefixer', '--no-map' ]);
+
+Can be used to set custom L</exe> arguments.
 
 By default, only two options will be set:
 
@@ -150,17 +136,16 @@ Note that setting your own options will B<replace> the default options.
 
 =head2 config_file
 
-The PostCSS configuration file. Default is C<MOJO_HOME/postcss.config.js>.
+The PostCSS configuration file. Default is C<MOJO_HOME/assets/postcss.config.js>.
 
 =head1 METHODS
- 
-=head2 process
- 
-See L<Mojolicious::Plugin::AssetPack::Pipe/process>.
- 
-=head1 SEE ALSO
- 
-L<Mojolicious::Plugin::AssetPack>.
- 
-=cut
 
+=head2 process
+
+See L<Mojolicious::Plugin::AssetPack::Pipe/process>.
+
+=head1 SEE ALSO
+
+L<Mojolicious::Plugin::AssetPack>.
+
+=cut
