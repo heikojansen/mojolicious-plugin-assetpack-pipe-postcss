@@ -11,10 +11,10 @@ has exe_args => sub {
 	my $args = [];
 
 	if ( my $cf = $pipe->config_file ) {
-		push @{$args}, sprintf( '--config %s', $cf )
+		push @{$args}, ( '--config', $cf );
 	}
 
-	push @{$args}, sprintf( '--env %s', $pipe->app->mode );
+	push @{$args}, ( '--env', $pipe->app->mode );
 
 	return $args;
 };
