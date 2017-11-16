@@ -40,19 +40,15 @@ sub process {
 			my $attrs = $asset->TO_JSON;
 			$attrs->{'key'} = 'postcss';
 
-			#if ( $file = $store->load($attrs) ) {
-			#	return $asset->content($file)->FROM_JSON($attrs);
-			#}
+			if ( $file = $store->load($attrs) ) {
+				return $asset->content($file)->FROM_JSON($attrs);
+			}
 
 			diag 'Process "%s", with checksum %s.', $asset->url, $attrs->{'checksum'} if DEBUG;
 
 			my $stdout = '';
 			my $input = $asset->content;
 			$pipe->run( [ $pipe->exe => @{ $pipe->exe_args } ], \$input, \$stdout );
-
-			if ( $stdout ne $input ) {
-				$attrs->{'checksum'} = checksum($stdout);
-			}
 			return $asset->content( $store->save( \$stdout, $attrs ) )->FROM_JSON($attrs);
 		}
 	);
