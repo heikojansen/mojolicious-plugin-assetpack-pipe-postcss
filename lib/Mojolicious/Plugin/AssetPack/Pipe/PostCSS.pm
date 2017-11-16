@@ -21,7 +21,10 @@ has exe_args => sub {
 
 has config_file => sub {
 	my $pipe = shift;
-	return $pipe->assetpack->store->asset('postcss.config.js')->path;
+	if ( $pipe->assetpack->store->asset('postcss.config.js') ) {
+		return $pipe->assetpack->store->asset('postcss.config.js')->path;
+	}
+	return '';
 };
 
 sub process {
