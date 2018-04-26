@@ -1,0 +1,6 @@
+*~
+.*.swp
+/Mojolicious-Plugin-AssetPack-Pipe-PostCSS-*/
+/Mojolicious-Plugin-AssetPack-Pipe-PostCSS-*.tar.gz
+/local
+/cpanfile.snapshot
